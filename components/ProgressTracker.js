@@ -1,17 +1,19 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { View, Text, ScrollView, Dimensions, TouchableOpacity, StyleSheet } from 'react-native';
 import { LineChart } from 'react-native-chart-kit';
 import { AnimatedCircularProgress } from 'react-native-circular-progress';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 
 const screenWidth = Dimensions.get('window').width;
 
 const ProgressTracker = () => {
   const [selectedTab, setSelectedTab] = useState('Week');
+  const [learnedCount, setLearnedCount] = useState(0);
+  const [matchedCount, setMatchedCount] = useState(0);
 
-  const progress = 75; // For main progress ring
-  const learned = 0;   // Replace with dynamic value later
-  const matched = 0;   // Replace with dynamic value later
+  // Optional: use these counts to update the main progress ring
+  const progress = Math.min(((learnedCount + matchedCount) / (2 * 247)) * 100, 100); // assuming 247 total characters
 
   const dataSets = {
     Week: [60, 75, 80, 90, 70, 88, 95],
@@ -24,6 +26,25 @@ const ProgressTracker = () => {
     Month: ['W1', 'W2', 'W3', 'W4', 'W5', 'W6', 'W7'],
     Year: ['J', 'F', 'M', 'A', 'M', 'J', 'J'],
   };
+
+  useEffect(() => {
+    const fetchProgress = async () => {
+      try {
+        const learningData = await AsyncStorage.getItem('learningProgress');
+        const matchingData = await AsyncStorage.getItem('matchingProgress');
+
+        const learned = learningData ? JSON.parse(learningData) : [];
+        const matched = matchingData ? JSON.parse(matchingData) : [];
+
+        setLearnedCount(learned.length);
+        setMatchedCount(matched.length);
+      } catch (error) {
+        console.error('Error fetching progress:', error);
+      }
+    };
+
+    fetchProgress();
+  }, []);
 
   return (
     <ScrollView style={styles.scrollView} contentContainerStyle={styles.scrollContent}>
@@ -99,26 +120,26 @@ const ProgressTracker = () => {
           <AnimatedCircularProgress
             size={90}
             width={8}
-            fill={learned}
+            fill={(learnedCount / 247) * 100}
             tintColor="#60a5fa"
             backgroundColor="#e0f2fe"
             duration={1000}
             rotation={0}
           >
-            {() => <Text style={styles.ringText}>{`Learned\n${learned}`}</Text>}
+            {() => <Text style={styles.ringText}>{`Learned\n${learnedCount}`}</Text>}
           </AnimatedCircularProgress>
         </View>
         <View style={styles.ringItem}>
           <AnimatedCircularProgress
             size={90}
             width={8}
-            fill={matched}
+            fill={(matchedCount / 247) * 100}
             tintColor="#c084fc"
             backgroundColor="#f3e8ff"
             duration={1000}
             rotation={0}
           >
-            {() => <Text style={styles.ringText}>{`Matched\n${matched}`}</Text>}
+            {() => <Text style={styles.ringText}>{`Matched\n${matchedCount}`}</Text>}
           </AnimatedCircularProgress>
         </View>
       </View>
@@ -127,11 +148,11 @@ const ProgressTracker = () => {
       <View style={styles.cardContainer}>
         <View style={styles.summaryCard}>
           <Text style={styles.cardTitle}>Learning Progress</Text>
-          <Text style={styles.cardDetail}>Characters Learned: {learned}</Text>
+          <Text style={styles.cardDetail}>Characters Learned: {learnedCount}</Text>
         </View>
         <View style={styles.summaryCard}>
           <Text style={styles.cardTitle}>Matching Game Progress</Text>
-          <Text style={styles.cardDetail}>Pairs Matched: {matched}</Text>
+          <Text style={styles.cardDetail}>Pairs Matched: {matchedCount}</Text>
         </View>
       </View>
 
